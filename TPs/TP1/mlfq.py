@@ -219,6 +219,8 @@ currTime = 0
 totalJobs    = len(job)
 finishedJobs = 0
 
+throughput = 0
+
 print('\nExecution Trace:\n')
 
 while finishedJobs < totalJobs:
@@ -288,6 +290,18 @@ while finishedJobs < totalJobs:
 
     print('[ time %d ] Run JOB %d at PRIORITY %d [ TICKS %d ALLOT %d TIME %d (of %d) ]' % \
           (currTime, currJob, currQueue, ticksLeft, allotLeft, timeLeft, runTime))
+
+
+    #Si el tiempo actual no es 0 y el tiempo actual es par
+    if ((currTime != 0) & ((currTime % 2) == 0)):
+
+        #calculo el throughput actual y lo imprimo
+        throughput = float(finishedJobs)/currTime
+        print('Throughput actual: %.2f' % (throughput))
+
+
+
+
 
     if timeLeft < 0:
         Abort('Error: should never have less than 0 time left to run')
@@ -364,12 +378,25 @@ print('')
 print('Final statistics:')
 responseSum   = 0
 turnaroundSum = 0
+
+#inicializo una variable para sumar los waiting times
+waitingTimeSum = 0
+
 for i in range(numJobs):
     response   = job[i]['firstRun'] - job[i]['startTime']
     turnaround = job[i]['endTime'] - job[i]['startTime']
-    print('  Job %2d: startTime %3d - response %3d - turnaround %3d' % (i, job[i]['startTime'], response, turnaround))
+
+    #Calculo el wating time del proceso i
+    waitingTime = job[i]['endTime'] - job[i]['startTime'] - job[i]['runTime']
+    
+    print('  Job %2d: startTime %3d - response %3d - turnaround %3d - waitingTime %3d' % (i, job[i]['startTime'], response, turnaround, waitingTime))
     responseSum   += response
     turnaroundSum += turnaround
 
-print('\n  Avg %2d: startTime n/a - response %.2f - turnaround %.2f' % (i, float(responseSum)/numJobs, float(turnaroundSum)/numJobs))
+    #Sumo el waiting time del proceso i a la suma de waiting times
+    waitingTimeSum += waitingTime
+
+#calculo el waiting time promedio de todos los trabajos
+waitingTimePromedio = float(waitingTimeSum)/numJobs
+print('\n  Avg %2d: startTime n/a - response %.2f - turnaround %.2f - waitingTime %.2f - throughput %.2f' % (i, float(responseSum)/numJobs, float(turnaroundSum)/numJobs, waitingTimePromedio, float(numJobs)/currTime))
 print('\n')
