@@ -100,7 +100,7 @@
 #define EXT2_S_IWOTH	0x0002	// others write
 #define EXT2_S_IXOTH	0x0001	// others execute
 
-#define INODE_ISDIR(inode) (inode->mode & EXT2_S_IFDIR)
+#define INODE_ISDIR(inode) (inode->mode & EXT2_S_IFDIR)	//mode guarda el tipo de archivo y los derechos de acceso
 #define DENT_ISDIR(dent) (dent->file_type & EXT2_FT_DIR)
 
 #define EXT2_RDIR_INODE_NUMBER	2
@@ -181,7 +181,7 @@ struct __attribute__((__packed__)) Ext2FSDirEntry {
 	unsigned short record_length;
 	unsigned char name_length;
 	unsigned char file_type;
-	char *name;
+	char name[];
 };
 
 std::ostream & operator<<(std::ostream & output, const struct Ext2FSDirEntry & dent);

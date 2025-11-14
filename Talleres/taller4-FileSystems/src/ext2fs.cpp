@@ -79,6 +79,7 @@ unsigned int Ext2FS::blockgroup_for_inode(unsigned int inode)
 unsigned int Ext2FS::blockgroup_inode_index(unsigned int inode)
 {
     assert(inode > 0);
+    //Devuelve el indice del inodo dentro de la tabla de inodos del blockGroup correspondiente por eso es % y no /.
     return (inode - 1) % _superblock->inodes_per_group;
 }
 
@@ -296,17 +297,17 @@ struct Ext2FSInode *Ext2FS::load_inode(unsigned int inode_number)
     unsigned int inodeTable = blockGroupDescriptor->inode_table;
 
     //Dado el numero de inodo consigo el indice dentro de la tabla de inodos que esta dentro del blockGroup al que pertenece ese inodo 
-    int inodeIndexInInodeTable = blockgroup_inode_index(inode_number);
+    int indexOfInodeInInodeTable = blockgroup_inode_index(inode_number);
 
     int inodes_per_block = block_size / sizeof(Ext2FSInode);
 
     unsigned char *buffer = (unsigned char *)malloc(block_size);
 
-    read_block(inodeTable + (inodeIndexInInodeTable / inodes_per_block), buffer);
+    read_block(inodeTable + (indexOfInodeInInodeTable / inodes_per_block), buffer);
 
     unsigned char *inode_buffer = (unsigned char *)malloc(_superblock->inode_size);
 
-    int inodeIndexInBlock = (inodeIndexInInodeTable * _superblock->inode_size) % block_size;
+    int inodeIndexInBlock = (indexOfInodeInInodeTable * _superblock->inode_size) % block_size;
 
     for (int i = 0; i < sizeof(Ext2FSInode); i++)
     {
@@ -380,34 +381,40 @@ struct Ext2FSInode *Ext2FS::get_file_inode_from_dir_inode(struct Ext2FSInode *fr
     // std::cerr << *from << std::endl;
     assert(INODE_ISDIR(from));
 
+    int block_size = 1024 << _superblock->log_block_size;
+
     int curr_block_number = 0;
+    int next_block_number = 1;
 
     // cargo dos bloques
-    unsigned char *buffer = (unsigned char *)malloc(2048);
+    unsigned char *buffer = (unsigned char *)malloc(block_size * 2);
+
     read_block(get_block_address(from, curr_block_number), buffer);
-    read_block(get_block_address(from, ++curr_block_number), buffer + 1024);
+    read_block(get_block_address(from, next_block_number), buffer + block_size);
 
-    Ext2FSDirEntry *dirEntryPointer = (Ext2FSDirEntry *)buffer;
-    unsigned int offset_abs = 0;
-    unsigned int offset_block = 0;
-    while (offset_abs < from->size)
-    { // para cada direntry
+    unsigned int absOffset = 0;
+    unsigned int blockOffset = 0;
 
-        Ext2FSDirEntry *dirEntryPointer = (Ext2FSDirEntry *)(buffer + offset_block);
+    while (absOffset < from->size)  //Mientras el offset absoluto sea menor que el tama;o del directorio
+    {
+        Ext2FSDirEntry *dirEntryPointer = (Ext2FSDirEntry *)(buffer + blockOffset);
 
         if (dirEntryPointer->name_length == strlen(filename) && strncmp(dirEntryPointer->name, filename, dirEntryPointer->name_length) == 0)
         {
             return load_inode(dirEntryPointer->inode);
         }
 
-        offset_abs += dirEntryPointer->record_length;
-        offset_block += dirEntryPointer->record_length;
-        if (offset_block >= 1024)
+        absOffset = absOffset + dirEntryPointer->record_length;
+        blockOffset = blockOffset + dirEntryPointer->record_length;
+
+        if (blockOffset >= block_size)
         {
+            curr_block_number++;
+            next_block_number++;
             read_block(get_block_address(from, curr_block_number), buffer);
-            read_block(get_block_address(from, ++curr_block_number), buffer + 1024);
+            read_block(get_block_address(from, next_block_number), buffer + block_size);
         }
-        offset_block = offset_block % 1024;
+        blockOffset = blockOffset % block_size;
     }
 
     return NULL;
