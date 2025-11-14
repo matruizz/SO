@@ -41,6 +41,7 @@ int main() {
             perror("Error");
             exit(EXIT_FAILURE);
         }
+        printf("estes es el id del cliente %d\n", id);
 
         char msg[5];
         if (read(client_socket, &msg, 5) == 0) {
